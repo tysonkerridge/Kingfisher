@@ -353,7 +353,7 @@ extension ImageCache {
     @available(*, deprecated, message: "Use `diskStorage.cacheFileURL(forKey:).path` instead.",
     renamed: "diskStorage.cacheFileURL(forKey:)")
     open func cachePath(forComputedKey key: String) -> String {
-        return diskStorage.cacheFileURL(forKey: key).path
+        return diskStorage.cacheFileURL(forKey: key, forStorage: false).path
     }
     
     /**

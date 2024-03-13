@@ -123,7 +123,7 @@ public enum DiskStorage {
                 throw KingfisherError.cacheError(reason: .cannotConvertToData(object: value, error: error))
             }
 
-            let fileURL = cacheFileURL(forKey: key)
+            let fileURL = cacheFileURL(forKey: key, forStorage: true)
             do {
                 try data.write(to: fileURL)
             } catch {
@@ -168,7 +168,7 @@ public enum DiskStorage {
             extendingExpiration: ExpirationExtending) throws -> T?
         {
             let fileManager = config.fileManager
-            let fileURL = cacheFileURL(forKey: key)
+            let fileURL = cacheFileURL(forKey: key, forStorage: false)
             let filePath = fileURL.path
 
             let fileMaybeCached = maybeCachedCheckingQueue.sync {
@@ -226,7 +226,7 @@ public enum DiskStorage {
         }
 
         func remove(forKey key: String) throws {
-            let fileURL = cacheFileURL(forKey: key)
+            let fileURL = cacheFileURL(forKey: key, forStorage: false)
             try removeFile(at: fileURL)
         }
 
@@ -253,9 +253,15 @@ public enum DiskStorage {
         ///
         /// - Parameter key: The final computed key used when caching the image. Please note that usually this is not
         /// the `cacheKey` of an image `Source`. It is the computed key with processor identifier considered.
-        public func cacheFileURL(forKey key: String) -> URL {
+        public func cacheFileURL(forKey key: String, forStorage: Bool) -> URL {
             let fileName = cacheFileName(forKey: key)
-            return directoryURL.appendingPathComponent(fileName, isDirectory: false)
+            var url = directoryURL.appendingPathComponent(fileName, isDirectory: false)
+            if forStorage {
+                var values = URLResourceValues()
+                values.isExcludedFromBackup = true
+                try? url.setResourceValues(values)
+            }
+            return url
         }
 
         func cacheFileName(forKey key: String) -> String {

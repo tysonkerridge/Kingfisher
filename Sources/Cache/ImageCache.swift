@@ -791,10 +791,11 @@ open class ImageCache {
     /// You could use `isCached(forKey:)` method to check whether the image is cached under that key in disk.
     open func cachePath(
         forKey key: String,
+        forStorage: Bool = false,
         processorIdentifier identifier: String = DefaultImageProcessor.default.identifier) -> String
     {
         let computedKey = key.computedKey(with: identifier)
-        return diskStorage.cacheFileURL(forKey: computedKey).path
+        return diskStorage.cacheFileURL(forKey: computedKey, forStorage: forStorage).path
     }
 }
 

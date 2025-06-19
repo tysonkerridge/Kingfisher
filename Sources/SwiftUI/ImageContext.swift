@@ -29,79 +29,77 @@ import SwiftUI
 import Combine
 
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
-extension KFImage {
-    public class Context<HoldingView: KFImageHoldingView>: @unchecked Sendable {
-        
-        private let propertyQueue = DispatchQueue(label: "com.onevcat.Kingfisher.KFImageContextPropertyQueue")
-        
-        let source: Source?
-        var _options = KingfisherParsedOptionsInfo(
-            KingfisherManager.shared.defaultOptions + [.loadDiskFileSynchronously]
-        )
-        var options: KingfisherParsedOptionsInfo {
-            get { propertyQueue.sync { _options } }
-            set { propertyQueue.sync { _options = newValue } }
-        }
-
-        var _configurations: [(HoldingView) -> HoldingView] = []
-        var configurations: [(HoldingView) -> HoldingView] {
-            get { propertyQueue.sync { _configurations } }
-            set { propertyQueue.sync { _configurations = newValue } }
-        }
-        
-        var _renderConfigurations: [(HoldingView.RenderingView) -> Void] = []
-        var renderConfigurations: [(HoldingView.RenderingView) -> Void] {
-            get { propertyQueue.sync { _renderConfigurations } }
-            set { propertyQueue.sync { _renderConfigurations = newValue } }
-        }
-        
-        var _contentConfiguration: ((HoldingView) -> AnyView)? = nil
-        var contentConfiguration: ((HoldingView) -> AnyView)? {
-            get { propertyQueue.sync { _contentConfiguration } }
-            set { propertyQueue.sync { _contentConfiguration = newValue } }
-        }
-        
-        var _cancelOnDisappear: Bool = false
-        var cancelOnDisappear: Bool {
-            get { propertyQueue.sync { _cancelOnDisappear } }
-            set { propertyQueue.sync { _cancelOnDisappear = newValue } }
-        }
-
-        var _reducePriorityOnDisappear: Bool = false
-		var reducePriorityOnDisappear: Bool {
-            get { propertyQueue.sync { _reducePriorityOnDisappear } }
-            set { propertyQueue.sync { _reducePriorityOnDisappear = newValue } }
-        }
-        
-        var _placeholder: ((Progress) -> AnyView)? = nil
-        var placeholder: ((Progress) -> AnyView)? {
-            get { propertyQueue.sync { _placeholder } }
-            set { propertyQueue.sync { _placeholder = newValue } }
-        }
-        
-        var _startLoadingBeforeViewAppear: Bool = false
-        var startLoadingBeforeViewAppear: Bool {
-            get { propertyQueue.sync { _startLoadingBeforeViewAppear } }
-            set { propertyQueue.sync { _startLoadingBeforeViewAppear = newValue } }
-        }
-
-        let onFailureDelegate = Delegate<KingfisherError, Void>()
-        let onSuccessDelegate = Delegate<RetrieveImageResult, Void>()
-        let onProgressDelegate = Delegate<(Int64, Int64), Void>()
-        
-        init(source: Source?) {
-            self.source = source
-        }
-        
-        func shouldApplyFade(cacheType: CacheType) -> Bool {
-            options.forceTransition || cacheType == .none
-        }
-
-        func fadeTransitionDuration(cacheType: CacheType) -> TimeInterval? {
-            shouldApplyFade(cacheType: cacheType)
-            ? options.transition.fadeDuration
-                : nil
-        }
+public class KFImageContext<HoldingView: KFImageHoldingView>: @unchecked Sendable {
+    
+    private let propertyQueue = DispatchQueue(label: "com.onevcat.Kingfisher.KFImageContextPropertyQueue")
+    
+    let source: Source?
+    var _options = KingfisherParsedOptionsInfo(
+        KingfisherManager.shared.defaultOptions + [.loadDiskFileSynchronously]
+    )
+    var options: KingfisherParsedOptionsInfo {
+        get { propertyQueue.sync { _options } }
+        set { propertyQueue.sync { _options = newValue } }
+    }
+    
+    var _configurations: [(HoldingView) -> HoldingView] = []
+    var configurations: [(HoldingView) -> HoldingView] {
+        get { propertyQueue.sync { _configurations } }
+        set { propertyQueue.sync { _configurations = newValue } }
+    }
+    
+    var _renderConfigurations: [(HoldingView.RenderingView) -> Void] = []
+    var renderConfigurations: [(HoldingView.RenderingView) -> Void] {
+        get { propertyQueue.sync { _renderConfigurations } }
+        set { propertyQueue.sync { _renderConfigurations = newValue } }
+    }
+    
+    var _contentConfiguration: ((HoldingView) -> AnyView)? = nil
+    var contentConfiguration: ((HoldingView) -> AnyView)? {
+        get { propertyQueue.sync { _contentConfiguration } }
+        set { propertyQueue.sync { _contentConfiguration = newValue } }
+    }
+    
+    var _cancelOnDisappear: Bool = false
+    var cancelOnDisappear: Bool {
+        get { propertyQueue.sync { _cancelOnDisappear } }
+        set { propertyQueue.sync { _cancelOnDisappear = newValue } }
+    }
+    
+    var _reducePriorityOnDisappear: Bool = false
+    var reducePriorityOnDisappear: Bool {
+        get { propertyQueue.sync { _reducePriorityOnDisappear } }
+        set { propertyQueue.sync { _reducePriorityOnDisappear = newValue } }
+    }
+    
+    var _placeholder: ((Progress) -> AnyView)? = nil
+    var placeholder: ((Progress) -> AnyView)? {
+        get { propertyQueue.sync { _placeholder } }
+        set { propertyQueue.sync { _placeholder = newValue } }
+    }
+    
+    var _startLoadingBeforeViewAppear: Bool = false
+    var startLoadingBeforeViewAppear: Bool {
+        get { propertyQueue.sync { _startLoadingBeforeViewAppear } }
+        set { propertyQueue.sync { _startLoadingBeforeViewAppear = newValue } }
+    }
+    
+    let onFailureDelegate = Delegate<KingfisherError, Void>()
+    let onSuccessDelegate = Delegate<RetrieveImageResult, Void>()
+    let onProgressDelegate = Delegate<(Int64, Int64), Void>()
+    
+    init(source: Source?) {
+        self.source = source
+    }
+    
+    func shouldApplyFade(cacheType: CacheType) -> Bool {
+        options.forceTransition || cacheType == .none
+    }
+    
+    func fadeTransitionDuration(cacheType: CacheType) -> TimeInterval? {
+        shouldApplyFade(cacheType: cacheType)
+        ? options.transition.fadeDuration
+        : nil
     }
 }
 
@@ -119,12 +117,12 @@ extension ImageTransition {
 
 
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
-extension KFImage.Context: Hashable {
-    public static func == (lhs: KFImage.Context<HoldingView>, rhs: KFImage.Context<HoldingView>) -> Bool {
+extension KFImageContext: Hashable {
+    public static func == (lhs: KFImageContext<HoldingView>, rhs: KFImageContext<HoldingView>) -> Bool {
         lhs.source == rhs.source &&
         lhs.options.processor.identifier == rhs.options.processor.identifier
     }
-
+    
     public func hash(into hasher: inout Hasher) {
         hasher.combine(source)
         hasher.combine(options.processor.identifier)
@@ -134,8 +132,8 @@ extension KFImage.Context: Hashable {
 #if !os(watchOS)
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
 extension KFAnimatedImage {
-    public typealias Context = KFImage.Context
-    typealias ImageBinder = KFImage.ImageBinder
+    public typealias Context = KFImageContext
+    typealias ImageBinder = KFImageImageBinder
 }
 #endif
 

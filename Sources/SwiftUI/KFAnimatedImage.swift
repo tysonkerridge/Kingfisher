@@ -29,11 +29,19 @@ import SwiftUI
 import Combine
 
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
-public struct KFAnimatedImage: KFImageProtocol {
+public struct KFAnimatedImage<PlaceholderView: View>: KFImageProtocol {
     public typealias HoldingView = KFAnimatedImageViewRepresenter
     public var context: Context<HoldingView>
-    public init(context: KFImage.Context<HoldingView>) {
+    public var placeholder: (() -> PlaceholderView)?
+    public var contentMode: SwiftUI.ContentMode
+    public init(
+        context: KFImageContext<HoldingView>,
+        placeholder: (() -> PlaceholderView)?,
+        contentMode: SwiftUI.ContentMode
+    ) {
         self.context = context
+        self.placeholder = placeholder
+        self.contentMode = contentMode
     }
     
     /// Configures current rendering view with a `block`. This block will be applied when the under-hood
@@ -59,12 +67,12 @@ typealias KFCrossPlatformViewRepresentable = UIViewRepresentable
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
 public struct KFAnimatedImageViewRepresenter: KFCrossPlatformViewRepresentable, KFImageHoldingView {
     public typealias RenderingView = AnimatedImageView
-    public static func created(from image: KFCrossPlatformImage?, context: KFImage.Context<Self>) -> KFAnimatedImageViewRepresenter {
+    public static func created(from image: KFCrossPlatformImage?, context: KFImageContext<Self>) -> KFAnimatedImageViewRepresenter {
         KFAnimatedImageViewRepresenter(image: image, context: context)
     }
     
     var image: KFCrossPlatformImage?
-    let context: KFImage.Context<KFAnimatedImageViewRepresenter>
+    let context: KFImageContext<KFAnimatedImageViewRepresenter>
     
     #if os(macOS)
     public func makeNSView(context: Context) -> AnimatedImageView {
@@ -113,7 +121,7 @@ public struct KFAnimatedImageViewRepresenter: KFCrossPlatformViewRepresentable, 
 struct KFAnimatedImage_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            KFAnimatedImage(source: .network(URL(string: "https://raw.githubusercontent.com/onevcat/Kingfisher-TestImages/master/DemoAppImage/GIF/1.gif")!))
+            KFAnimatedImage<EmptyView>(source: .network(URL(string: "https://raw.githubusercontent.com/onevcat/Kingfisher-TestImages/master/DemoAppImage/GIF/1.gif")!))
                 .onSuccess { r in
                     print(r)
                 }

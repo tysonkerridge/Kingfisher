@@ -62,12 +62,18 @@ import Combine
 /// extension methods.
 ///
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
-public struct KFImage: KFImageProtocol {
+public struct KFImage<PlaceholderView: View>: KFImageProtocol {
+    
+    public typealias Context = _KFImage.Context
     
     /// Represent the wrapping context of the image view.
     ///
     /// Inside ``KFImage`` it is using the `SwiftUI.Image` to render the image.
     public var context: Context<Image>
+    
+    public var placeholder: (() -> PlaceholderView)?
+    
+    public var contentMode: SwiftUI.ContentMode?
     
     /// Initializes the ``KFImage`` with a context.
     ///
@@ -75,15 +81,21 @@ public struct KFImage: KFImageProtocol {
     ///  ``KFImage/init(source:)`` or ``KFImage/init(_:)`` initializers or other relevant methods in ``KF`` Builder
     ///  type.
     /// - Parameter context: The context value that the image view should wrap.
-    public init(context: Context<Image>) {
+    public init(
+        context: _KFImage.Context<HoldingView>,
+        placeholder: (() -> PlaceholderView)?,
+        contentMode: SwiftUI.ContentMode?
+    ) {
         self.context = context
+        self.placeholder = placeholder
+        self.contentMode = contentMode
     }
 }
 
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
 extension Image: KFImageHoldingView {
     public typealias RenderingView = Image
-    public static func created(from image: KFCrossPlatformImage?, context: KFImage.Context<Self>) -> Image {
+    public static func created(from image: KFCrossPlatformImage?, context: _KFImage.Context<Self>) -> Image {
         Image(crossPlatformImage: image)
     }
 }
@@ -128,12 +140,15 @@ extension KFImage {
     }
 }
 
+/// Non-generic helper for KFImage to keep extensions structured similarly.
+public struct _KFImage {}
+
 #if DEBUG
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
 struct KFImage_Previews: PreviewProvider {
     static var previews: some View {
         Group {
-            KFImage.url(URL(string: "https://raw.githubusercontent.com/onevcat/Kingfisher/master/images/logo.png")!)
+            KFImage<EmptyView>.url(URL(string: "https://raw.githubusercontent.com/onevcat/Kingfisher/master/images/logo.png")!)
                 .onSuccess { r in
                     print(r)
                 }

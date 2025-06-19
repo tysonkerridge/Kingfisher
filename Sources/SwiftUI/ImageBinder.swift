@@ -29,42 +29,44 @@ import SwiftUI
 import Combine
 
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
-extension KFImage {
-
+extension _KFImage {
+    
     /// Represents a binder for `KFImage`. It takes responsibility as an `ObjectBinding` and performs
     /// image downloading and progress reporting based on `KingfisherManager`.
     @MainActor
     class ImageBinder: ObservableObject {
         
+        typealias Context = _KFImage.Context
+        
         init() {}
-
+        
         var downloadTask: DownloadTask?
         private var loading = false
-
+        
         var loadingOrSucceeded: Bool {
             return loading || loadedImage != nil
         }
-
+        
         // Do not use @Published due to https://github.com/onevcat/Kingfisher/issues/1717. Revert to @Published once
         // we can drop iOS 12.
         private(set) var loaded = false
-
+        
         private(set) var animating = false
-
+        
         var loadedImage: KFCrossPlatformImage? = nil { willSet { objectWillChange.send() } }
         var progress: Progress = .init()
-
+        
         func markLoading() {
             loading = true
         }
-
+        
         func markLoaded(sendChangeEvent: Bool) {
             loaded = true
             if sendChangeEvent {
                 objectWillChange.send()
             }
         }
-
+        
         func start<HoldingView: KFImageHoldingView>(context: Context<HoldingView>) {
             guard let source = context.source else {
                 CallbackQueueMain.currentOrAsync {
@@ -77,7 +79,7 @@ extension KFImage {
                 }
                 return
             }
-
+            
             loading = true
             
             progress = .init()
@@ -96,9 +98,9 @@ extension KFImage {
                         }
                     },
                     completionHandler: { [weak self] result in
-
+                        
                         guard let self else { return }
-
+                        
                         CallbackQueueMain.currentOrAsync {
                             self.downloadTask = nil
                             self.loading = false
@@ -120,7 +122,7 @@ extension KFImage {
                                 self.loadedImage = value.image
                                 self.animating = false
                             }
-
+                            
                             CallbackQueueMain.async {
                                 context.onSuccessDelegate.call(value)
                             }
@@ -136,7 +138,7 @@ extension KFImage {
                                 context.onFailureDelegate.call(error)
                             }
                         }
-                })
+                    })
         }
         
         private func updateProgress(downloaded: Int64, total: Int64) {
@@ -144,7 +146,7 @@ extension KFImage {
             progress.completedUnitCount = downloaded
             objectWillChange.send()
         }
-
+        
         /// Cancels the download task if it is in progress.
         func cancel() {
             downloadTask?.cancel()
@@ -165,4 +167,5 @@ extension KFImage {
         }
     }
 }
+
 #endif

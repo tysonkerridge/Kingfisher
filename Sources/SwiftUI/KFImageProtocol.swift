@@ -38,17 +38,39 @@ import Combine
 @MainActor
 public protocol KFImageProtocol: View, KFOptionSetter {
     associatedtype HoldingView: KFImageHoldingView
-    var context: KFImage.Context<HoldingView> { get set }
-    init(context: KFImage.Context<HoldingView>)
+    associatedtype PlaceholderView: View
+    var context: _KFImage.Context<HoldingView> { get set }
+    var placeholder: (() -> PlaceholderView)? { get set }
+    var contentMode: SwiftUI.ContentMode? { get set }
+    init(
+        context: _KFImage.Context<HoldingView>,
+        placeholder: (() -> PlaceholderView)?,
+        contentMode: SwiftUI.ContentMode?
+    )
 }
 
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
 extension KFImageProtocol {
+    
+    init(context: _KFImage.Context<HoldingView>) {
+        self.init(context: context, placeholder: nil, contentMode: nil)
+    }
+    
+    init(context: _KFImage.Context<HoldingView>, placeholder: (() -> PlaceholderView)?) {
+        self.init(context: context, placeholder: placeholder, contentMode: nil)
+    }
+    
+    init(context: _KFImage.Context<HoldingView>, contentMode: SwiftUI.ContentMode?) {
+        self.init(context: context, placeholder: nil, contentMode: contentMode)
+    }
+    
     @MainActor
     public var body: some View {
         ZStack {
-            KFImageRenderer<HoldingView>(
-                context: context
+            KFImageRenderer<HoldingView, PlaceholderView>(
+                context: context,
+                placeholder: placeholder,
+                contentMode: contentMode
             ).id(context)
         }
     }
@@ -57,17 +79,33 @@ extension KFImageProtocol {
     ///
     /// - Parameters:
     ///   - source: The `Source` of the image that specifies where to load the target image.
-    public init(source: Source?) {
-        let context = KFImage.Context<HoldingView>(source: source)
-        self.init(context: context)
+    public init(
+        source: Source?,
+        placeholder: (() -> PlaceholderView)? = nil,
+        contentMode: SwiftUI.ContentMode? = nil
+    ) {
+        let context = _KFImage.Context<HoldingView>(source: source)
+        self.init(
+            context: context,
+            placeholder: placeholder,
+            contentMode: contentMode
+        )
     }
 
     /// Creates an image view compatible with Kingfisher for loading an image from the provided `URL`.
     ///
     /// - Parameters:
     ///   - url: The `URL` defining the location from which to load the target image.
-    public init(_ url: URL?) {
-        self.init(source: url?.convertToSource())
+    public init(
+        _ url: URL?,
+        placeholder: (() -> PlaceholderView)? = nil,
+        contentMode: SwiftUI.ContentMode? = nil
+    ) {
+        self.init(
+            source: url?.convertToSource(),
+            placeholder: placeholder,
+            contentMode: contentMode
+        )
     }
     
     /// Configures the current image with a `block` and returns another `Image` to use as the final content.
@@ -107,7 +145,7 @@ extension KFImageProtocol {
 @MainActor
 public protocol KFImageHoldingView: View {
     associatedtype RenderingView
-    static func created(from image: KFCrossPlatformImage?, context: KFImage.Context<Self>) -> Self
+    static func created(from image: KFCrossPlatformImage?, context: _KFImage.Context<Self>) -> Self
 }
 
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)

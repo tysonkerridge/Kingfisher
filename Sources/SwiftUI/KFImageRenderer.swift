@@ -31,10 +31,12 @@ import Combine
 /// A Kingfisher compatible SwiftUI `View` to load an image from a `Source`.
 /// Declaring a `KFImage` in a `View`'s body to trigger loading from the given `Source`.
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
-struct KFImageRenderer<HoldingView> : View where HoldingView: KFImageHoldingView {
+struct KFImageRenderer<HoldingView, PlaceholderView> : View where HoldingView: KFImageHoldingView, PlaceholderView: View {
     
-    @StateObject var binder: KFImage.ImageBinder = .init()
-    let context: KFImage.Context<HoldingView>
+    @StateObject var binder: _KFImage.ImageBinder = .init()
+    let context: _KFImage.Context<HoldingView>
+    let placeholder: (() -> PlaceholderView)?
+    let contentMode: SwiftUI.ContentMode?
     
     var body: some View {
         if context.startLoadingBeforeViewAppear && !binder.loadingOrSucceeded && !binder.animating {
@@ -48,6 +50,8 @@ struct KFImageRenderer<HoldingView> : View where HoldingView: KFImageHoldingView
                 ZStack {
                     if let placeholder = context.placeholder {
                         placeholder(binder.progress)
+                    } else if let placeholder = placeholder {
+                        placeholder()
                     } else {
                         Color.clear
                     }
@@ -90,6 +94,16 @@ struct KFImageRenderer<HoldingView> : View where HoldingView: KFImageHoldingView
     
     @ViewBuilder
     private func renderedImage() -> some View {
+        let rendered = _renderedImage()
+        if let contentMode {
+            rendered.aspectRatio(nil, contentMode: contentMode)
+        } else {
+            rendered
+        }
+    }
+    
+    @ViewBuilder
+    private func _renderedImage() -> some View {
         let configuredImage = context.configurations
             .reduce(HoldingView.created(from: binder.loadedImage, context: context)) {
                 current, config in config(current)
@@ -100,6 +114,7 @@ struct KFImageRenderer<HoldingView> : View where HoldingView: KFImageHoldingView
             configuredImage
         }
     }
+    
 }
 
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)

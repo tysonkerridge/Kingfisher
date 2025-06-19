@@ -29,7 +29,8 @@ import SwiftUI
 import Combine
 
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
-extension KFImage {
+extension _KFImage {
+    
     public class Context<HoldingView: KFImageHoldingView>: @unchecked Sendable {
         
         private let propertyQueue = DispatchQueue(label: "com.onevcat.Kingfisher.KFImageContextPropertyQueue")
@@ -42,7 +43,7 @@ extension KFImage {
             get { propertyQueue.sync { _options } }
             set { propertyQueue.sync { _options = newValue } }
         }
-
+        
         var _configurations: [(HoldingView) -> HoldingView] = []
         var configurations: [(HoldingView) -> HoldingView] {
             get { propertyQueue.sync { _configurations } }
@@ -66,9 +67,9 @@ extension KFImage {
             get { propertyQueue.sync { _cancelOnDisappear } }
             set { propertyQueue.sync { _cancelOnDisappear = newValue } }
         }
-
+        
         var _reducePriorityOnDisappear: Bool = false
-		var reducePriorityOnDisappear: Bool {
+        var reducePriorityOnDisappear: Bool {
             get { propertyQueue.sync { _reducePriorityOnDisappear } }
             set { propertyQueue.sync { _reducePriorityOnDisappear = newValue } }
         }
@@ -84,7 +85,7 @@ extension KFImage {
             get { propertyQueue.sync { _startLoadingBeforeViewAppear } }
             set { propertyQueue.sync { _startLoadingBeforeViewAppear = newValue } }
         }
-
+        
         let onFailureDelegate = Delegate<KingfisherError, Void>()
         let onSuccessDelegate = Delegate<RetrieveImageResult, Void>()
         let onProgressDelegate = Delegate<(Int64, Int64), Void>()
@@ -96,13 +97,14 @@ extension KFImage {
         func shouldApplyFade(cacheType: CacheType) -> Bool {
             options.forceTransition || cacheType == .none
         }
-
+        
         func fadeTransitionDuration(cacheType: CacheType) -> TimeInterval? {
             shouldApplyFade(cacheType: cacheType)
             ? options.transition.fadeDuration
-                : nil
+            : nil
         }
     }
+    
 }
 
 extension ImageTransition {
@@ -119,12 +121,12 @@ extension ImageTransition {
 
 
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
-extension KFImage.Context: Hashable {
-    public static func == (lhs: KFImage.Context<HoldingView>, rhs: KFImage.Context<HoldingView>) -> Bool {
+extension _KFImage.Context: Hashable {
+    public static func == (lhs: _KFImage.Context<HoldingView>, rhs: _KFImage.Context<HoldingView>) -> Bool {
         lhs.source == rhs.source &&
         lhs.options.processor.identifier == rhs.options.processor.identifier
     }
-
+    
     public func hash(into hasher: inout Hasher) {
         hasher.combine(source)
         hasher.combine(options.processor.identifier)
@@ -134,8 +136,8 @@ extension KFImage.Context: Hashable {
 #if !os(watchOS)
 @available(iOS 14.0, macOS 11.0, tvOS 14.0, watchOS 7.0, *)
 extension KFAnimatedImage {
-    public typealias Context = KFImage.Context
-    typealias ImageBinder = KFImage.ImageBinder
+    public typealias Context = _KFImage.Context
+    typealias ImageBinder = _KFImage.ImageBinder
 }
 #endif
 

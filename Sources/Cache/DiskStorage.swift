@@ -48,6 +48,9 @@ public enum DiskStorage {
         private let propertyQueue = DispatchQueue(label: "com.onevcat.kingfisher.DiskStorage.Backend.propertyQueue")
         
         private var _config: Config
+        public var currentConfig: Config {
+            _config 
+        }
         /// The configuration used for this disk storage.
         ///
         /// It is a value you can set and use to configure the storage as needed.
@@ -367,30 +370,15 @@ public enum DiskStorage {
         /// where the image should be if it exists in the disk storage, with the given key and file extension.
         ///
         public func cacheFileURL(forKey key: String, forcedExtension: String? = nil) -> URL {
-            let fileName = cacheFileName(forKey: key, forcedExtension: forcedExtension)
-            return directoryURL.appendingPathComponent(fileName, isDirectory: false)
+            DiskStorageHelper.cacheFileURL(directoryURL: directoryURL, config: config, forKey: key, forcedExtension: forcedExtension)
         }
         
         func cacheFileName(forKey key: String, forcedExtension: String? = nil) -> String {
-            let baseName = config.usesHashedFileName ? key.kf.sha256 : key
-            
-            if let ext = fileExtension(key: key, forcedExtension: forcedExtension) {
-                return "\(baseName).\(ext)"
-            }
-            
-            return baseName
+            DiskStorageHelper.cacheFileName(config: config, forKey: key, forcedExtension: forcedExtension)
         }
         
         func fileExtension(key: String, forcedExtension: String?) -> String? {
-            if let ext = forcedExtension ?? config.pathExtension {
-                return ext
-            }
-        
-            if config.usesHashedFileName && config.autoExtAfterHashedFileName {
-                return key.kf.ext
-            }
-        
-            return nil
+            DiskStorageHelper.fileExtension(config: config, key: key, forcedExtension: forcedExtension)
         }
 
         func allFileURLs(for propertyKeys: [URLResourceKey]) throws -> [URL] {
@@ -496,6 +484,68 @@ public enum DiskStorage {
             return totalSize
         }
     }
+}
+
+extension ImageCache {
+    
+    public static func fileName(
+        directoryURL: URL,
+        config: DiskStorage.Config,
+        source: Source,
+        processor: ImageProcessor
+    ) -> URL {
+        DiskStorageHelper.cacheFileURL(
+            directoryURL: directoryURL,
+            config: config,
+            forKey: source.cacheKey.computedKey(with: processor.identifier)
+        )
+    }
+    
+}
+
+public struct DiskStorageHelper {
+    
+    static func cacheFileURL(
+        directoryURL: URL,
+        config: DiskStorage.Config,
+        forKey key: String,
+        forcedExtension: String? = nil
+    ) -> URL {
+        let fileName = cacheFileName(config: config, forKey: key, forcedExtension: forcedExtension)
+        return directoryURL.appendingPathComponent(fileName, isDirectory: false)
+    }
+    
+    static func cacheFileName(
+        config: DiskStorage.Config,
+        forKey key: String,
+        forcedExtension: String? = nil
+    ) -> String {
+        let baseName = config.usesHashedFileName ? key.kf.sha256 : key
+        
+        if let ext = fileExtension(config: config, key: key, forcedExtension: forcedExtension) {
+            return "\(baseName).\(ext)"
+        }
+        
+        return baseName
+    }
+    
+    static func fileExtension(
+        config: DiskStorage.Config,
+        key: String,
+        forcedExtension: String?
+    ) -> String? {
+        if let ext = forcedExtension ?? config.pathExtension {
+            return ext
+        }
+    
+        if config.usesHashedFileName && config.autoExtAfterHashedFileName {
+            return key.kf.ext
+        }
+    
+        return nil
+    }
+
+    
 }
 
 extension DiskStorage {

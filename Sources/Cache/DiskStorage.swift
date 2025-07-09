@@ -225,7 +225,7 @@ public enum DiskStorage {
             forKey key: String,
             forcedExtension: String? = nil,
             extendingExpiration: ExpirationExtending = .cacheTime
-        ) throws -> T? {
+        ) throws -> (T?, URL) {
             try value(
                 forKey: key,
                 referenceDate: Date(),
@@ -241,7 +241,7 @@ public enum DiskStorage {
             actuallyLoad: Bool,
             extendingExpiration: ExpirationExtending,
             forcedExtension: String?
-        ) throws -> T?
+        ) throws -> (T?, URL)
         {
             guard storageReady else {
                 throw KingfisherError.cacheError(reason: .diskStorageIsNotReady(cacheURL: directoryURL))
@@ -255,10 +255,10 @@ public enum DiskStorage {
                 return maybeCached?.contains(fileURL.lastPathComponent) ?? true
             }
             guard fileMaybeCached else {
-                return nil
+                return (nil, fileURL)
             }
             guard fileManager.fileExists(atPath: filePath) else {
-                return nil
+                return (nil, fileURL)
             }
 
             let meta: FileMeta
@@ -271,9 +271,9 @@ public enum DiskStorage {
             }
 
             if meta.expired(referenceDate: referenceDate) {
-                return nil
+                return (nil, fileURL)
             }
-            if !actuallyLoad { return T.empty }
+            if !actuallyLoad { return (T.empty, fileURL) }
 
             do {
                 let data = try Data(contentsOf: fileURL)
@@ -281,7 +281,7 @@ public enum DiskStorage {
                 metaChangingQueue.async {
                     meta.extendExpiration(with: self.config.fileManager, extendingExpiration: extendingExpiration)
                 }
-                return obj
+                return (obj, fileURL)
             } catch {
                 throw KingfisherError.cacheError(reason: .cannotLoadDataFromDisk(url: fileURL, error: error))
             }
@@ -322,7 +322,7 @@ public enum DiskStorage {
                     extendingExpiration: .none,
                     forcedExtension: forcedExtension
                 )
-                return result != nil
+                return result.0 != nil
             } catch {
                 return false
             }

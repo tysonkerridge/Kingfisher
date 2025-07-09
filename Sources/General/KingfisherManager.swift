@@ -80,6 +80,8 @@ public struct RetrieveImageResult: Sendable {
     /// - Note: Retrieving this data can be a time-consuming operation, so it is advisable to store it if you need to 
     /// use it multiple times and avoid frequent calls to this method.
     public let data: @Sendable () -> Data?
+    
+    public let cacheFileURL: URL?
 }
 
 /// A structure that stores related information about a ``KingfisherError``. It provides contextual information
@@ -475,7 +477,8 @@ public class KingfisherManager: @unchecked Sendable {
                 cacheType: .none,
                 source: source,
                 originalSource: context.originalSource,
-                data: {  value.originalData }
+                data: {  value.originalData },
+                cacheFileURL: nil
             )
             // Add image to cache.
             let targetCache = options.targetCache ?? self.cache
@@ -614,10 +617,11 @@ public class KingfisherManager: @unchecked Sendable {
                     let value = result.map {
                         RetrieveImageResult(
                             image: image,
-                            cacheType: $0.cacheType,
+                            cacheType: $0.result.cacheType,
                             source: source,
                             originalSource: context.originalSource,
-                            data: { [image] in options.cacheSerializer.data(with: image, original: nil) }
+                            data: { [image] in options.cacheSerializer.data(with: image, original: nil) },
+                            cacheFileURL: $0.url
                         )
                     }
                     completionHandler(value)
@@ -625,7 +629,7 @@ public class KingfisherManager: @unchecked Sendable {
                 
                 result.match { cacheResult in
                     options.callbackQueue.execute {
-                        guard let image = cacheResult.image else {
+                        guard let image = cacheResult.result.image else {
                             completionHandler(.failure(KingfisherError.cacheError(reason: .imageNotExisting(key: key))))
                             return
                         }
@@ -682,7 +686,7 @@ public class KingfisherManager: @unchecked Sendable {
 
                 result.match(
                     onSuccess: { cacheResult in
-                        guard let image = cacheResult.image else {
+                        guard let image = cacheResult.result.image else {
                             assertionFailure("The image (under key: \(key) should be existing in the original cache.")
                             return
                         }
@@ -709,7 +713,8 @@ public class KingfisherManager: @unchecked Sendable {
                                 cacheType: .none,
                                 source: source,
                                 originalSource: context.originalSource,
-                                data: { options.cacheSerializer.data(with: processedImage, original: nil) }
+                                data: { options.cacheSerializer.data(with: processedImage, original: nil) },
+                                cacheFileURL: cacheResult.url
                             )
 
                             targetCache.store(

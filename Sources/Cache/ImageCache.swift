@@ -142,6 +142,20 @@ public enum ImageCacheResult: Sendable {
     }
 }
 
+public struct _ImageCacheResult: Sendable {
+    
+    public let result: ImageCacheResult
+    public let url: URL?
+    
+}
+
+extension _ImageCacheResult {
+    
+    static func none(url: URL?) -> _ImageCacheResult {
+        .init(result: .none, url: url)
+    }
+}
+
 /// Represents a hybrid caching system composed of a ``MemoryStorage`` and a ``DiskStorage``.
 ///
 /// ``ImageCache`` serves as a high-level abstraction for storing an image and its data in memory and on disk, as well
@@ -609,27 +623,27 @@ open class ImageCache: @unchecked Sendable {
         forKey key: String,
         options: KingfisherParsedOptionsInfo,
         callbackQueue: CallbackQueue = .mainCurrentOrAsync,
-        completionHandler: (@Sendable (Result<ImageCacheResult, KingfisherError>) -> Void)?)
+        completionHandler: (@Sendable (Result<_ImageCacheResult, KingfisherError>) -> Void)?)
     {
         // No completion handler. No need to start working and early return.
         guard let completionHandler = completionHandler else { return }
 
         // Try to check the image from memory cache first.
         if let image = retrieveImageInMemoryCache(forKey: key, options: options) {
-            callbackQueue.execute { completionHandler(.success(.memory(image))) }
+            callbackQueue.execute { completionHandler(.success(.init(result: .memory(image), url: nil))) }
         } else if options.fromMemoryCacheOrRefresh {
-            callbackQueue.execute { completionHandler(.success(.none)) }
+            callbackQueue.execute { completionHandler(.success(.none(url: nil))) }
         } else {
 
             // Begin to disk search.
             self.retrieveImageInDiskCache(forKey: key, options: options, callbackQueue: callbackQueue) {
                 result in
                 switch result {
-                case .success(let image):
+                case .success(let _image):
 
-                    guard let image = image else {
+                    guard let image = _image.image else {
                         // No image found in disk storage.
-                        callbackQueue.execute { completionHandler(.success(.none)) }
+                        callbackQueue.execute { completionHandler(.success(.none(url: _image.url))) }
                         return
                     }
 
@@ -645,7 +659,7 @@ open class ImageCache: @unchecked Sendable {
                         toDisk: false)
                     {
                         _ in
-                        callbackQueue.execute { completionHandler(.success(.disk(image))) }
+                        callbackQueue.execute { completionHandler(.success(.init(result: .disk(image), url: _image.url))) }
                     }
                 case .failure(let error):
                     callbackQueue.execute { completionHandler(.failure(error)) }
@@ -673,7 +687,7 @@ open class ImageCache: @unchecked Sendable {
         forKey key: String,
         options: KingfisherOptionsInfo? = nil,
         callbackQueue: CallbackQueue = .mainCurrentOrAsync,
-        completionHandler: (@Sendable (Result<ImageCacheResult, KingfisherError>) -> Void)?
+        completionHandler: (@Sendable (Result<_ImageCacheResult, KingfisherError>) -> Void)?
     )
     {
         retrieveImage(
@@ -718,29 +732,35 @@ open class ImageCache: @unchecked Sendable {
     {
         return retrieveImageInMemoryCache(forKey: key, options: KingfisherParsedOptionsInfo(options))
     }
+    
+    public struct DiskImage: Sendable {
+        public let image: KFCrossPlatformImage?
+        public let url: URL?
+    }
 
     func retrieveImageInDiskCache(
         forKey key: String,
         options: KingfisherParsedOptionsInfo,
         callbackQueue: CallbackQueue = .untouch,
-        completionHandler: @escaping @Sendable (Result<KFCrossPlatformImage?, KingfisherError>) -> Void)
+        completionHandler: @escaping @Sendable (Result<DiskImage, KingfisherError>) -> Void)
     {
         let computedKey = key.computedKey(with: options.processor.identifier)
         let loadingQueue: CallbackQueue = options.loadDiskFileSynchronously ? .untouch : .dispatch(ioQueue)
         loadingQueue.execute {
             do {
                 var image: KFCrossPlatformImage? = nil
-                if let data = try self.diskStorage.value(
+                let diskImage = try self.diskStorage.value(
                     forKey: computedKey,
                     forcedExtension: options.forcedExtension,
                     extendingExpiration: options.diskCacheAccessExtendingExpiration
-                ) {
+                )
+                if let data = diskImage.0 {
                     image = options.cacheSerializer.image(with: data, options: options)
                 }
                 if options.backgroundDecode {
                     image = image?.kf.decoded(scale: options.scaleFactor)
                 }
-                callbackQueue.execute { [image] in completionHandler(.success(image)) }
+                callbackQueue.execute { [image] in completionHandler(.success(.init(image: image, url: diskImage.1))) }
             } catch let error as KingfisherError {
                 callbackQueue.execute { completionHandler(.failure(error)) }
             } catch {
@@ -761,7 +781,7 @@ open class ImageCache: @unchecked Sendable {
         forKey key: String,
         options: KingfisherOptionsInfo? = nil,
         callbackQueue: CallbackQueue = .untouch,
-        completionHandler: @escaping @Sendable (Result<KFCrossPlatformImage?, KingfisherError>) -> Void)
+        completionHandler: @escaping @Sendable (Result<ImageCache.DiskImage, KingfisherError>) -> Void)
     {
         retrieveImageInDiskCache(
             forKey: key,
@@ -1181,7 +1201,7 @@ open class ImageCache: @unchecked Sendable {
     open func retrieveImage(
         forKey key: String,
         options: KingfisherParsedOptionsInfo
-    ) async throws -> ImageCacheResult {
+    ) async throws -> _ImageCacheResult {
         try await withCheckedThrowingContinuation { continuation in
             retrieveImage(forKey: key, options: options) { continuation.resume(with: $0) }
         }
@@ -1203,7 +1223,7 @@ open class ImageCache: @unchecked Sendable {
     open func retrieveImage(
         forKey key: String,
         options: KingfisherOptionsInfo? = nil
-    ) async throws -> ImageCacheResult {
+    ) async throws -> _ImageCacheResult {
         try await withCheckedThrowingContinuation { continuation in
             retrieveImage(forKey: key, options: options) { continuation.resume(with: $0) }
         }
@@ -1228,7 +1248,7 @@ open class ImageCache: @unchecked Sendable {
     ) async throws -> KFCrossPlatformImage? {
         try await withCheckedThrowingContinuation { continuation in
             retrieveImageInDiskCache(forKey: key, options: options) {
-                continuation.resume(with: $0)
+                continuation.resume(with: $0.map(\.image))
             }
         }
     }
